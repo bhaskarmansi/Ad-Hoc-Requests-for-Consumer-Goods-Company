@@ -17,10 +17,13 @@ Australia*/
 -- --- unique_products_2020
 -- --- unique_products_2021
 -- --- percentage_chg
-WITH CTE AS (SELECT 
+
+WITH CTE AS
+	(SELECT 
 (SELECT COUNT(DISTINCT PRODUCT_CODE) FROM fact_gross_price WHERE FISCAL_YEAR = 2020) AS unique_products_2020,
 (SELECT COUNT(DISTINCT PRODUCT_CODE) FROM fact_gross_price WHERE FISCAL_YEAR = 2021) AS unique_products_2021
 )
+
 SELECT unique_products_2020, unique_products_2021,
 	ROUND((unique_products_2021-unique_products_2020)*100/unique_products_2020,2) AS percentage_chg
 FROM CTE;
@@ -34,7 +37,8 @@ percentage_chg - 36.33
 
 -- 3.Provide a report with all the unique product counts for each segment and sort them in descending order of product counts. The final output contains 2 fields, segment product_count
 
-select segment, count(distinct product) as product_count
+select segment, 
+	count(distinct product) as product_count
 from dim_product
 group by segment
 order by product_count desc;
@@ -50,16 +54,19 @@ order by product_count desc;
 	Networking	3
 */
 -- 4.Follow-up: Which segment had the most increase in unique products in 2021 vs 2020? The final output contains these fields, segment product_count_2020 product_count_2021 difference
+
 with 2020_cnt as ( select segment, count(distinct product) product_count_2020 
 from dim_product p
 join fact_gross_price gp on p.product_code=gp.product_code
 where fiscal_year = 2020
 group by segment),
+
 2021_cnt as ( select segment, count(distinct product) product_count_2021
 from dim_product p
 join fact_gross_price gp on p.product_code=gp.product_code
 where fiscal_year = 2021
 group by segment)
+
 select 2020_cnt.segment, product_count_2020, product_count_2021, (product_count_2021-product_count_2020) as difference
 from 2020_cnt
 join 2021_cnt on 2020_cnt.segment=2021_cnt.segment
@@ -78,19 +85,21 @@ limit 1;
 */
 
 -- 5. Get the products that have the highest and lowest manufacturing costs.The final output should contain these fields, product_code, product, manufacturing_cost
-  select p.product_code, product, manufacturing_cost
- from dim_product p 
- join fact_manufacturing_cost m 
+
+select p.product_code, product, manufacturing_cost
+from dim_product p 
+join fact_manufacturing_cost m 
 	on p.product_code=m.product_code
 where manufacturing_cost = (select max(manufacturing_cost) from fact_manufacturing_cost) or
-	 manufacturing_cost = (select min(manufacturing_cost) from fact_manufacturing_cost);
+      manufacturing_cost = (select min(manufacturing_cost) from fact_manufacturing_cost);
 /* OUPUT
 product_code, product, manufacturing_cost
 A6120110206	AQ HOME Allin1 Gen 2	240.5364
 A2118150101	AQ Master wired x1 Ms	0.8920
 */
 
--- 6.Generate a report which contains the top 5 customers who received an average high pre_invoice_discount_pct for the fiscal year 2021 and in the Indian market. The final output contains these fields, customer_code customer average_discount_percentage
+-- 6. Generate a report that contains the top 5 customers who received an average high pre_invoice_discount_pct for the fiscal year 2021 and in the Indian market. The final output contains these fields, customer_code customer average_discount_percentage
+
 select  c.customer_code, c.customer, avg(pre_invoice_discount_pct) as average_discount_percentage
 from dim_customer c
 join fact_pre_invoice_deductions pre
@@ -149,11 +158,11 @@ order by month, s.fiscal_year  ;
 -- 8.In which quarter of 2020, got the maximum total_sold_quantity? The final output contains these fields sorted by the total_sold_quantity, Quarter total_sold_quantity
 
 select  
-		case when month(date) in (9,10,11) then 'Q1'
-			when month(date) in(12,1,2) then 'Q2'
-            when month(date) in(3,4, 5) then 'Q3'
-            else 'Q4' end as quarter,
-           sum(sold_quantity) as total_sold_quantity
+ case when month(date) in (9,10,11) then 'Q1'
+      when month(date) in(12,1,2) then 'Q2'
+      when month(date) in(3,4, 5) then 'Q3'
+      else 'Q4' end as quarter,
+sum(sold_quantity) as total_sold_quantity
 from fact_sales_monthly
 where fiscal_year=2020
 group by quarter
@@ -171,12 +180,14 @@ order by total_sold_quantity desc;
 
 
 with 2021_gross_sales as (
-	select (sum(sold_quantity*gross_price)) as total_gs_mln 
+    select (sum(sold_quantity*gross_price)) as total_gs_mln 
     from fact_sales_monthly s1
     join fact_gross_price gp on s1.product_code=gp.product_code and s1.fiscal_year=gp.fiscal_year
     where s1.fiscal_year=2021
 )
-select channel, round((sum(sold_quantity*gross_price)/1000000),2)  gross_sales_mln, round(sum((sold_quantity*gross_price)*100)/total_gs_mln, 1) as gross_sales_mln_pct
+select  channel, 
+	round((sum(sold_quantity*gross_price)/1000000),2)  gross_sales_mln, 
+	round(sum((sold_quantity*gross_price)*100)/total_gs_mln, 1) as gross_sales_mln_pct
 from fact_sales_monthly s
 join dim_customer c on s.customer_code=c.customer_code
 join fact_gross_price gp on s.product_code=gp.product_code and s.fiscal_year=gp.fiscal_year
@@ -194,7 +205,8 @@ group by channel,total_gs_mln;
 
 -- 10.	Get the Top 3 products in each division that have a high total_sold_quantity in the fiscal_year 2021? The final output contains these fields, division product_code codebasics.io product total_sold_quantity rank_order
 
-with cte as(select division, s.product_code, product, sum(sold_quantity) as total_sold_quantity,
+with cte as
+	(select division, s.product_code, product, sum(sold_quantity) as total_sold_quantity,
 		rank() over(partition by division order by sum(sold_quantity) desc) as rank_order
 from fact_sales_monthly s
 join dim_product p on s.product_code=p.product_code
